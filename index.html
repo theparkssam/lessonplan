@@ -44,8 +44,8 @@
         .ai-btn { background: #6c5ce7; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-top: 5px; font-size: 13px; font-weight: bold; font-family: inherit; }
         .apply-btn { width: 100%; background: var(--main-blue); color: white; border: none; padding: 15px; font-size: 1em; font-weight: bold; cursor: pointer; margin-top: 5px; }
 
-        /* 우측 미리보기 패널 */
-        #right-panel { flex: 0 0 65%; width: 65%; max-width: 65%; height: 100vh; padding: 18px; overflow: auto; display: flex; align-items: center; justify-content: center; box-sizing: border-box; position: relative; }
+        /* 우측 미리보기 패널 (상단 잘림 현상 수정: align-items: flex-start 적용) */
+        #right-panel { flex: 0 0 65%; width: 65%; max-width: 65%; height: 100vh; padding: 18px; overflow: auto; display: flex; align-items: flex-start; justify-content: center; box-sizing: border-box; position: relative; }
         .preview-wrapper { transform-origin: top left; transition: transform 0.2s ease; flex: 0 0 auto; overflow: visible; }
         
         #preview-area { 
@@ -678,6 +678,7 @@
         scalePreviewToPanel();
     });
 
+    /* 스케일링 함수 (상단 정렬 고정 적용) */
     function scalePreviewToPanel() {
         const panel = document.getElementById('right-panel');
         const wrapper = document.getElementById('preview-wrapper');
@@ -692,6 +693,10 @@
         wrapper.style.width = (previewW * scale) + 'px';
         wrapper.style.transform = `scale(${scale})`;
         wrapper.style.transformOrigin = 'top left';
+
+        panel.style.overflow = 'auto';
+        panel.style.alignItems = 'flex-start';
+        panel.style.justifyContent = 'center';
 
         if (label) label.textContent = manualPreviewZoom === 1 ? '너비맞춤' : Math.round(manualPreviewZoom * 100) + '%';
     }
