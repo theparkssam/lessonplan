@@ -44,7 +44,7 @@
         .ai-btn { background: #6c5ce7; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-top: 5px; font-size: 13px; font-weight: bold; font-family: inherit; }
         .apply-btn { width: 100%; background: var(--main-blue); color: white; border: none; padding: 15px; font-size: 1em; font-weight: bold; cursor: pointer; margin-top: 5px; }
 
-        /* 우측 미리보기 패널 (상단 잘림 현상 수정: align-items: flex-start 적용) */
+        /* 우측 미리보기 패널 */
         #right-panel { flex: 0 0 65%; width: 65%; max-width: 65%; height: 100vh; padding: 18px; overflow: auto; display: flex; align-items: flex-start; justify-content: center; box-sizing: border-box; position: relative; }
         .preview-wrapper { transform-origin: top left; transition: transform 0.2s ease; flex: 0 0 auto; overflow: visible; }
         
@@ -490,12 +490,20 @@
         if (el) el.textContent = message;
     }
 
-    function buildEditableDesignPackage() {
+    // 전체 실시간 미리보기 갱신 함수
+    function updateAllPreview() {
         try {
-            applyStep1(); applyStep2(); applyStep3(); applyStep4(); installSvgPrintShapes();
+            applyStep1();
+            applyStep2();
+            applyStep3();
+            applyStep4();
         } catch (e) {
-            console.warn('설계안 저장 전 자동 반영 중 일부 오류가 발생했습니다.', e);
+            console.warn('미리보기 실시간 업데이트 중 오류 발생:', e);
         }
+    }
+
+    function buildEditableDesignPackage() {
+        updateAllPreview();
         const state = collectShareState();
         return {
             app: '중학교 AI·디지털 교수학습 설계안 작성도구',
@@ -580,12 +588,20 @@
         autosaveTimer = setTimeout(() => saveDraftToBrowser(), delay);
     }
 
+    // 좌측 패널 입력 시 실시간 미리보기 연동 이벤트 핸들러
     function setupAutosaveListeners() {
         const left = document.getElementById('left-panel');
         if (!left || left.dataset.autosaveReady === 'true') return;
         left.dataset.autosaveReady = 'true';
-        left.addEventListener('input', () => scheduleAutosave());
-        left.addEventListener('change', () => scheduleAutosave());
+        
+        left.addEventListener('input', () => {
+            updateAllPreview();
+            scheduleAutosave();
+        });
+        left.addEventListener('change', () => {
+            updateAllPreview();
+            scheduleAutosave();
+        });
     }
 
     function restoreAutosavedDraftIfAvailable() {
@@ -625,7 +641,7 @@
             setupAutosaveListeners();
             const restored = restoreAutosavedDraftIfAvailable();
             if (!restored) {
-                applyStep1(); applyStep2(); applyStep3(); applyStep4(); installSvgPrintShapes();
+                updateAllPreview();
             }
             scalePreviewToPanel();
         }
@@ -678,7 +694,6 @@
         scalePreviewToPanel();
     });
 
-    /* 스케일링 함수 (상단 정렬 고정 적용) */
     function scalePreviewToPanel() {
         const panel = document.getElementById('right-panel');
         const wrapper = document.getElementById('preview-wrapper');
@@ -724,7 +739,8 @@
     }
 
     function syncTitle() {
-        document.getElementById('v-subject-title').innerText = document.getElementById('subject').value;
+        const subTitle = document.getElementById('v-subject-title');
+        if (subTitle) subTitle.innerText = document.getElementById('subject').value;
         searchStandards();
     }
 
@@ -842,9 +858,10 @@
                 </div>
             </div>
             <button class="ai-btn" style="background:#2d3436; font-size:0.7em;" onclick="addSubTool(this)">+ 도구 추가</button>
-            ${isNew ? '<button onclick="this.parentElement.remove()" style="position:absolute; top:5px; right:5px; border:none; background:red; color:white; border-radius:50%; width:20px; height:20px; cursor:pointer;">×</button>' : ''}
+            ${isNew ? '<button onclick="this.parentElement.remove(); applyStep2();" style="position:absolute; top:5px; right:5px; border:none; background:red; color:white; border-radius:50%; width:20px; height:20px; cursor:pointer;">×</button>' : ''}
         `;
         container.appendChild(div);
+        applyStep2();
     }
 
     function moveStepItem(btn, direction) {
@@ -872,12 +889,14 @@
     function removeSubTool(btn) {
         const row = btn.closest('.tool-row');
         if (row) row.remove();
+        applyStep2();
     }
 
     function selectType(btn, val) {
         btn.parentElement.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         btn.parentElement.querySelector('.s-type').value = val;
+        applyStep2();
     }
 
     function addEvalItem(isNew = true) {
@@ -899,9 +918,10 @@
                 <label>평가도구(방법)</label>
                 <input type="text" class="e-tool" placeholder="예: Padlet 공유 및 동료평가">
             </div>
-            ${isNew ? '<button onclick="this.parentElement.remove()" style="margin-top:8px; background:#aaa; color:white; border:none; border-radius:4px; padding:5px 10px; cursor:pointer;">삭제</button>' : ''}
+            ${isNew ? '<button onclick="this.parentElement.remove(); applyStep3();" style="margin-top:8px; background:#aaa; color:white; border:none; border-radius:4px; padding:5px 10px; cursor:pointer;">삭제</button>' : ''}
         `;
         container.appendChild(div);
+        applyStep3();
     }
 
     function escapeHTML(str = "") {
@@ -913,21 +933,26 @@
     }
 
     function applyStep1() {
+        const gradeSelect = document.getElementById('grade');
+        const gradeText = gradeSelect.options[gradeSelect.selectedIndex] ? gradeSelect.options[gradeSelect.selectedIndex].text : '';
         const mapping = {
-            'v-subject-title': document.getElementById('subject').value,
-            'v-grade': document.getElementById('grade').options[document.getElementById('grade').selectedIndex].text + ' ' + document.getElementById('semester').value,
-            'v-unit': document.getElementById('unit').value,
-            'v-period': document.getElementById('period').value,
-            'v-target': document.getElementById('target').value,
-            'v-teacher': document.getElementById('teacher').value,
-            'v-topic': document.getElementById('topic').value,
+            'v-subject-title': document.getElementById('subject').value || '',
+            'v-grade': gradeText + ' ' + (document.getElementById('semester').value || ''),
+            'v-unit': document.getElementById('unit').value || '',
+            'v-period': document.getElementById('period').value || '',
+            'v-target': document.getElementById('target').value || '',
+            'v-teacher': document.getElementById('teacher').value || '',
+            'v-topic': document.getElementById('topic').value || '',
             'v-std': getCombinedStandardText(),
-            'v-inquiry': document.getElementById('inquiry-q').value,
-            'v-tools': document.getElementById('ai-tools').value,
-            'v-intent': document.getElementById('intent').value,
-            'v-analysis': document.getElementById('analysis').value
+            'v-inquiry': document.getElementById('inquiry-q').value || '',
+            'v-tools': document.getElementById('ai-tools').value || '',
+            'v-intent': document.getElementById('intent').value || '',
+            'v-analysis': document.getElementById('analysis').value || ''
         };
-        for (let id in mapping) document.getElementById(id).innerText = mapping[id];
+        for (let id in mapping) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = mapping[id];
+        }
     }
 
     function getStepFlowData() {
@@ -994,7 +1019,6 @@
             });
         });
 
-        // 화살표 그리기
         for (let i = 0; i < positions.length - 1; i++) {
             const p1 = positions[i];
             const p2 = positions[i + 1];
@@ -1014,24 +1038,28 @@
         const data = getStepFlowData();
         prepareDynamicCanvasWidth(data);
         renderStepFlow(area, svg, data);
-        installSvgPrintShapes();
         scalePreviewToPanel();
     }
 
     function applyStep3() {
         const body = document.getElementById('v-eval-body');
+        if (!body) return;
         body.innerHTML = '';
         document.querySelectorAll('#eval-items-container > div').forEach(item => {
-            body.innerHTML += `<tr><td>${escapeHTML(item.querySelector('.e-factor').value)}</td><td>${escapeHTML(item.querySelector('.e-a').value)}</td><td>${escapeHTML(item.querySelector('.e-b').value)}</td><td>${escapeHTML(item.querySelector('.e-c').value)}</td><td align="center">${escapeHTML(item.querySelector('.e-tool').value)}</td></tr>`;
+            const factor = item.querySelector('.e-factor')?.value || '';
+            const ea = item.querySelector('.e-a')?.value || '';
+            const eb = item.querySelector('.e-b')?.value || '';
+            const ec = item.querySelector('.e-c')?.value || '';
+            const etool = item.querySelector('.e-tool')?.value || '';
+            body.innerHTML += `<tr><td>${escapeHTML(factor)}</td><td>${escapeHTML(ea)}</td><td>${escapeHTML(eb)}</td><td>${escapeHTML(ec)}</td><td align="center">${escapeHTML(etool)}</td></tr>`;
         });
-        installSvgPrintShapes();
     }
 
     function applyStep4() {
-        document.getElementById('v-precautions').innerHTML = nl2brEscaped(document.getElementById('precautions').value);
+        const prec = document.getElementById('precautions')?.value || '';
+        const target = document.getElementById('v-precautions');
+        if (target) target.innerHTML = nl2brEscaped(prec);
     }
-
-    function installSvgPrintShapes() {}
 
     function collectShareState() {
         return {
@@ -1079,7 +1107,7 @@
         document.getElementById('ai-tools').value = o.aiTools || '';
         document.getElementById('precautions').value = state.precautions || '';
 
-        applyStep1(); applyStep2(); applyStep3(); applyStep4();
+        updateAllPreview();
     }
 
     function loadSharedDesignFromUrl() {
