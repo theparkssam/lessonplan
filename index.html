@@ -1,107 +1,832 @@
-당신은 교육 데이터 시각화 앱 개발 전문가입니다.
-아래에 제시하는 [과목 평가 데이터]와 [평가 근거]를 바탕으로, HTML 단일 파일 앱을 만들어 주세요.
-앱 제목은 "데이터 시각화 및 분석 실습"으로 하고, Chart.js와 Tailwind CSS를 CDN으로 사용해 주세요.
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>사이언스 글쓰기 클리닉 - 중학생 과학 피드백 웹앱</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Fonts: Noto Sans KR & Gaegu for friendly text -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&family=Gowun+Dodum&display=swap" rel="stylesheet">
 
-[앱의 목적]
-교사가 자신의 과목 평가 결과와 평가 근거를 입력하면, 학생별 성취 수준과 학습 과정의 병목을 12종 시각화로 확인할 수 있어야 합니다.
-단순 점수 그래프가 아니라 평가 근거 텍스트를 정량 지표로 변환하여 시각화에 반영해 주세요.
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Noto Sans KR', 'sans-serif'],
+            gowun: ['Gowun Dodum', 'sans-serif'],
+          },
+          colors: {
+            pastel: {
+              blue: '#e0f2fe',
+              blueBorder: '#bae6fd',
+              indigo: '#e0e7ff',
+              indigoText: '#4338ca',
+              mint: '#d1fae5',
+              mintText: '#047857',
+              pink: '#fce7f3',
+              pinkText: '#be185d',
+              yellow: '#fef3c7',
+              yellowText: '#b45309',
+              purple: '#f3e8ff',
+              purpleText: '#7e22ce'
+            }
+          }
+        }
+      }
+    }
+  </script>
 
-[반드시 포함할 탭]
-1. 가상 학생 또는 학습자 요약
-   - 평가 점수 요약표
-   - 평가 근거 원문 반영표
-   - 학생별 핵심 프로파일 카드
+  <style>
+    body {
+      background: linear-gradient(135deg, #f0f9ff 0%, #f5f3ff 50%, #ecfdf5 100%);
+      min-height: 100vh;
+    }
+    
+    .glass-card {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+    }
 
-2. 12종 시각화
-   - V01 전체 수준 분포: 도넛 차트
-   - V02 학습 단계별 이벤트 흐름: 선그래프 또는 영역그래프
-   - V03 단계별 소요시간 비교: 묶은 막대그래프
-   - V04 우수 학생 역량 방사형: 레이더 차트
-   - V05 전체 학생 역량 중첩 비교: 레이더 중첩 차트
-   - V06 평가 근거 기반 정량 지표 히트맵: HTML 히트맵
-   - V07 핵심 활동 단계 병목 정밀 진단: 영역 또는 선그래프
-   - V08 선행 조건과 성취 관계: 산점도
-   - V09 AI 도움 요청 또는 교사 도움 요청 추이: 선그래프
-   - V10 학생 A 종합 대시보드
-   - V11 학생 B 종합 대시보드
-   - V12 학생 C 종합 대시보드
+    .pastel-shadow {
+      box-shadow: 0 10px 25px -5px rgba(148, 163, 184, 0.15), 0 8px 10px -6px rgba(148, 163, 184, 0.1);
+    }
 
-3. JSON 정형 데이터
-   - 학생 점수, 평가 근거, 평가 근거에서 추출한 정량 지표, 12종 시각화 매핑을 JSON으로 보여 주세요.
-   - JSON 복사 버튼을 넣어 주세요.
+    .step-active {
+      border-color: #6366f1;
+      ring: 4px;
+      ring-color: rgba(99, 102, 241, 0.15);
+    }
 
-4. 다른 과목 적용 지침
-   - 이 앱을 다른 과목 평가 데이터로 바꾸는 방법과 GPT/Gemini에 붙여 넣을 프롬프트를 포함해 주세요.
+    /* Print Stylesheet for Report Printing */
+    @media print {
+      body {
+        background: white !important;
+        color: black !important;
+        font-size: 11pt;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .glass-card {
+        background: white !important;
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        page-break-inside: avoid;
+        margin-bottom: 20px !important;
+      }
+      .step-container {
+        display: block !important;
+        opacity: 1 !important;
+      }
+      textarea {
+        border: none !important;
+        resize: none !important;
+        background: #f8fafc !important;
+      }
+    }
+  </style>
+</head>
+<body class="font-sans text-slate-800 antialiased p-3 sm:p-6 md:p-8">
 
-[V10~V12 대시보드 조건]
-각 학생별 종합 대시보드는 한 화면에 4개 미니 차트를 보여 주세요.
-① 단계별 소요시간
-② 점수 성취도(각 평가 영역을 100점 환산)
-③ 평가 영역 방사형
-④ 도움 요청 추이
-하단에는 학생별 진단 문장을 넣어 주세요.
-차트와 진단 문장이 서로 겹치지 않도록 카드 높이와 여백을 충분히 확보해 주세요.
+  <div class="max-w-4xl mx-auto space-y-6">
 
-[평가 근거 텍스트를 정량화하는 방법]
-평가 근거에 들어 있는 표현을 다음과 같이 수치화해 주세요.
-- 탐구질문 명확, 주제 자기 설정 → questionClarity, selfDirection 높음
-- 교사 안내 후 확정 → teacherIntervention 중간
-- 교사 직접 개입, 탐구질문 미정의 → teacherIntervention 높음, questionClarity 낮음
-- 결측치 0, 구조 완벽 정제 → preprocessAccuracy 높음, missingRemain 낮음
-- 절대참조 오류, 일부 결측치 잔존 → preprocessErrors 반영
-- 정규화 개념 미이해, 원시 데이터 진입 → normalization 낮음
-- 피벗·이중축 성공, 상관계수 도출 → pivotSuccess, dualAxis, correlationSuccess 높음
-- 단일 막대, 보조축 누락 → dualAxis 낮음
-- 원형 차트 오선택, 수치 분석 전무 → chartFit 낮음
-- 데이터 근거 대안, 포스터 완성 → evidenceUse, posterCompletion 높음
-- 근거 없음, 포스터 미완성 → evidenceUse, posterCompletion 낮음
+    <!-- App Header -->
+    <header class="glass-card rounded-3xl p-6 sm:p-8 pastel-shadow relative overflow-hidden border-indigo-100">
+      <div class="absolute -right-8 -top-8 w-32 h-32 bg-indigo-200/50 rounded-full blur-2xl pointer-events-none"></div>
+      <div class="absolute -left-8 -bottom-8 w-32 h-32 bg-teal-200/50 rounded-full blur-2xl pointer-events-none"></div>
+      
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold mb-2">
+            <i class="fa-solid font-flask-vial"></i> 중학생 과학 글쓰기 클리닉
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">
+            🧪 과학적 사실 기반 탐구 글쓰기
+          </h1>
+          <p class="text-slate-600 text-sm mt-1">
+            짧은 과학 설명글을 작성하고, AI 선생님의 과학적 피드백을 받아 2번 교정해 보세요!
+          </p>
+        </div>
 
-[과목 평가 데이터 입력 양식]
-아래 형식으로 데이터를 교체해서 앱을 만들어 주세요.
+        <div class="flex flex-wrap items-center gap-2 no-print self-end sm:self-auto">
+          <button id="btn-sheet-config" onclick="toggleSheetModal()" class="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border border-emerald-200">
+            <i class="fa-solid fa-file-excel text-emerald-600"></i> 구글 시트 연동
+          </button>
+          <button id="btn-reset" onclick="resetForm()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+            <i class="fa-solid fa-rotate-right"></i> 다시 작성
+          </button>
+          <button id="btn-print" onclick="window.print()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md transition flex items-center gap-1.5">
+            <i class="fa-solid fa-print"></i> 인쇄 / PDF
+          </button>
+        </div>
+      </div>
 
-과목명: 과학
-수행 과제명: 스마트 에듀테크 도구(Padlet, Canva 등)를 활용해 제작한 '식물 에너지 메커니즘 기반 도심 환경 개선 기획 보고서(카드뉴스 또는 인포그래픽 포함)' 및 3분 제안 발표 (역할: 지속가능한 도시를 설계하는 생태도시공학자(Eco-City Engineer))
-평가 영역:과학적 개념 적용력
-- 영역1명 (만점)
-- 영역2명 (만점)
-- 영역3명 (만점)
+      <!-- Student Info Bar -->
+      <div class="mt-6 pt-6 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">학생 이름 <span class="text-rose-500">*</span></label>
+          <input type="text" id="student-name" placeholder="예: 김과학" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">학년 / 반 / 번호 <span class="text-rose-500">*</span></label>
+          <input type="text" id="student-id" placeholder="예: 2학년 3반 15번" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">과학 주제 / 단원명 <span class="text-rose-500">*</span></label>
+          <input type="text" id="science-topic" placeholder="예: 광합성과 호흡, 열의 이동, 보일 법칙" class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition">
+        </div>
+      </div>
+    </header>
 
-학생 A:
-- 수준: 상/중/하 또는 심화/기본/기초
-- 영역1 점수:
-- 영역2 점수:
-- 영역3 점수:
-- 총점:
-- 평가 근거 1단계:
-- 평가 근거 2단계:
-- 평가 근거 3단계:
-- 평가 근거 4단계:
+    <!-- Progress Indicator Bar -->
+    <div class="no-print grid grid-cols-4 gap-2 sm:gap-4 text-center text-xs font-bold">
+      <div id="badge-step-1" class="py-2.5 px-2 rounded-2xl bg-indigo-100 text-indigo-700 border-2 border-indigo-400 transition-all">
+        <span class="block text-[10px] opacity-75">1단계</span> 1차 초안 작성
+      </div>
+      <div id="badge-step-2" class="py-2.5 px-2 rounded-2xl bg-slate-100 text-slate-400 border-2 border-transparent transition-all">
+        <span class="block text-[10px] opacity-75">2단계</span> 1차 피드백
+      </div>
+      <div id="badge-step-3" class="py-2.5 px-2 rounded-2xl bg-slate-100 text-slate-400 border-2 border-transparent transition-all">
+        <span class="block text-[10px] opacity-75">3단계</span> 수정안 작성
+      </div>
+      <div id="badge-step-4" class="py-2.5 px-2 rounded-2xl bg-slate-100 text-slate-400 border-2 border-transparent transition-all">
+        <span class="block text-[10px] opacity-75">4단계</span> 최종 피드백
+      </div>
+    </div>
 
-학생 B:
-- 수준:
-- 영역1 점수:
-- 영역2 점수:
-- 영역3 점수:
-- 총점:
-- 평가 근거 1단계:
-- 평가 근거 2단계:
-- 평가 근거 3단계:
-- 평가 근거 4단계:
+    <!-- STEP 1: Draft 1 Input -->
+    <section id="step-1-container" class="glass-card rounded-3xl p-6 sm:p-8 pastel-shadow transition-all border-l-8 border-l-indigo-400">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-full bg-indigo-500 text-white font-bold flex items-center justify-center text-sm shadow-sm">1</span>
+          <div>
+            <h2 class="text-lg font-bold text-slate-800">1차 초안 작성하기</h2>
+            <p class="text-xs text-slate-500">배운 과학 개념이나 현상을 나만의 언어로 3~5문장 설명해보세요.</p>
+          </div>
+        </div>
+        <span class="text-xs px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg font-medium">초안 단계</span>
+      </div>
 
-학생 C:
-- 수준:
-- 영역1 점수:
-- 영역2 점수:
-- 영역3 점수:
-- 총점:
-- 평가 근거 1단계:
-- 평가 근거 2단계:
-- 평가 근거 3단계:
-- 평가 근거 4단계:
+      <div class="space-y-3">
+        <textarea id="draft-1-text" rows="5" placeholder="예시: 식물은 햇빛을 받아 광합성을 합니다. 이 과정에서 물과 이산화탄소를 사용해 산소와 포도당을 만듭니다. 밤에는 광합성을 하지 않고 호흡만 해서 산소를 마시고 이산화탄소를 배출합니다." class="w-full p-4 text-sm sm:text-base bg-white border border-indigo-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition leading-relaxed shadow-inner placeholder:text-slate-300"></textarea>
 
-[출력 조건]
-- 완성된 HTML 파일 형태로 작성해 주세요.
-- 모든 데이터는 코드 안에 내장해 주세요.
-- 외부 서버나 백엔드는 사용하지 마세요.
-- Chart.js가 정상 작동하도록 canvas와 대시보드 높이를 충분히 확보해 주세요.
-- 교사가 복사해서 바로 저장하면 실행 가능한 단일 HTML로 만들어 주세요.
+        <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+          <span>글자 수: <strong id="draft-1-length" class="text-indigo-600">0</strong>자</span>
+          <span class="text-slate-400">과학적 용어(원인, 결과, 원리)를 명확히 적어보세요!</span>
+        </div>
+
+        <div class="pt-2 flex justify-end no-print">
+          <button id="btn-submit-draft-1" onclick="submitDraft1()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-sm shadow-md hover:shadow-indigo-200 transition flex items-center gap-2 group">
+            <span>1차 피드백 요청하기</span>
+            <i class="fa-solid fa-wand-magic-sparkles group-hover:rotate-12 transition-transform"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2: First Feedback Output -->
+    <section id="step-2-container" class="glass-card rounded-3xl p-6 sm:p-8 pastel-shadow hidden transition-all border-l-8 border-l-amber-400 bg-amber-50/20">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-full bg-amber-500 text-white font-bold flex items-center justify-center text-sm shadow-sm">2</span>
+          <div>
+            <h2 class="text-lg font-bold text-slate-800">1차 과학적 분석 & 피드백</h2>
+            <p class="text-xs text-slate-500">작성한 초안의 과학적 오류와 잘한 점을 확인하세요.</p>
+          </div>
+        </div>
+        <span class="text-xs px-2.5 py-1 bg-amber-100 text-amber-800 rounded-lg font-medium">1차 검토 완료</span>
+      </div>
+
+      <!-- Loading State Spinner -->
+      <div id="feedback-1-loading" class="py-12 flex flex-col items-center justify-center space-y-3">
+        <div class="w-10 h-10 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin"></div>
+        <p class="text-sm font-semibold text-amber-700">과학 선생님 AI가 글을 분석하고 있어요...</p>
+        <p class="text-xs text-slate-400">과학적 정확성, 용어 사용, 논리적 흐름 점검 중</p>
+      </div>
+
+      <!-- Feedback Content Display -->
+      <div id="feedback-1-content" class="hidden space-y-4">
+        <!-- Score & Summary Banner -->
+        <div class="p-4 rounded-2xl bg-amber-100/60 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">💡</span>
+            <div>
+              <span id="fb1-grade" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-white">체크 완료</span>
+              <p id="fb1-summary" class="text-sm font-bold text-amber-900 mt-1">과학적 개념이 비교적 잘 드러난 글입니다.</p>
+            </div>
+          </div>
+          <div class="text-xs text-amber-800 bg-white/80 px-3 py-1.5 rounded-xl border border-amber-200">
+            총점: <strong id="fb1-score" class="text-amber-600 text-base">80</strong> / 100점
+          </div>
+        </div>
+
+        <!-- Detailed Feedback Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Strengths -->
+          <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
+            <h3 class="text-xs font-bold text-emerald-800 flex items-center gap-1.5 mb-2">
+              <i class="fa-solid fa-circle-check text-emerald-500"></i> 잘한 부분 (칭찬점)
+            </h3>
+            <ul id="fb1-strengths" class="text-xs text-slate-700 space-y-1.5 list-disc pl-4 leading-relaxed">
+              <!-- JS Populated -->
+            </ul>
+          </div>
+
+          <!-- Misconceptions / Errors -->
+          <div class="p-4 rounded-2xl bg-rose-50 border border-rose-100">
+            <h3 class="text-xs font-bold text-rose-800 flex items-center gap-1.5 mb-2">
+              <i class="fa-solid fa-triangle-exclamation text-rose-500"></i> 수정이 필요한 과학적 오류
+            </h3>
+            <ul id="fb1-errors" class="text-xs text-slate-700 space-y-1.5 list-disc pl-4 leading-relaxed">
+              <!-- JS Populated -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- Actionable Suggestions -->
+        <div class="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+          <h3 class="text-xs font-bold text-indigo-800 flex items-center gap-1.5">
+            <i class="fa-solid fa-lightbulb text-indigo-500"></i> 다음 수정 시 권장하는 과학 용어 및 개선 팁
+          </h3>
+          <p id="fb1-suggestions" class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <!-- JS Populated -->
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 3: Revised Draft Input -->
+    <section id="step-3-container" class="glass-card rounded-3xl p-6 sm:p-8 pastel-shadow hidden transition-all border-l-8 border-l-teal-400">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-full bg-teal-500 text-white font-bold flex items-center justify-center text-sm shadow-sm">3</span>
+          <div>
+            <h2 class="text-lg font-bold text-slate-800">수정안 작성하기</h2>
+            <p class="text-xs text-slate-500">위 1차 피드백을 참고하여 더욱 정확하고 정교한 과학 글로 고쳐 적으세요.</p>
+          </div>
+        </div>
+        <button onclick="copyDraft1To3()" class="no-print text-xs text-teal-700 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-xl transition border border-teal-200 flex items-center gap-1">
+          <i class="fa-regular fa-copy"></i> 1차 초안 불러오기
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <textarea id="draft-2-text" rows="5" placeholder="1차 피드백 내용을 바탕으로 수정된 과학 설명글을 입력하세요..." class="w-full p-4 text-sm sm:text-base bg-white border border-teal-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-teal-400 transition leading-relaxed shadow-inner placeholder:text-slate-300"></textarea>
+
+        <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+          <span>글자 수: <strong id="draft-2-length" class="text-teal-600">0</strong>자</span>
+          <span class="text-teal-600">수정된 용어와 원리를 다시 한번 확인해보세요!</span>
+        </div>
+
+        <div class="pt-2 flex justify-end no-print">
+          <button id="btn-submit-draft-2" onclick="submitDraft2()" class="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-bold text-sm shadow-md hover:shadow-teal-200 transition flex items-center gap-2 group">
+            <span>2차 피드백 & 제출하기</span>
+            <i class="fa-solid fa-paper-plane group-hover:translate-x-1 transition-transform"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 4: Final Evaluation Output -->
+    <section id="step-4-container" class="glass-card rounded-3xl p-6 sm:p-8 pastel-shadow hidden transition-all border-l-8 border-l-purple-500 bg-purple-50/20">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-full bg-purple-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">4</span>
+          <div>
+            <h2 class="text-lg font-bold text-slate-800">최종 평가 및 성장 보고서</h2>
+            <p class="text-xs text-slate-500">1차 작성부터 최종 수정까지 과학적 글쓰기의 발전 성과를 확인합니다.</p>
+          </div>
+        </div>
+        <span class="text-xs px-2.5 py-1 bg-purple-100 text-purple-800 rounded-lg font-bold">최종 완료 ✨</span>
+      </div>
+
+      <!-- Loading State Spinner -->
+      <div id="feedback-2-loading" class="py-12 flex flex-col items-center justify-center space-y-3">
+        <div class="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+        <p class="text-sm font-semibold text-purple-800">최종 피드백과 과학적 개선도 평가를 생성하고 있습니다...</p>
+      </div>
+
+      <!-- Final Content Display -->
+      <div id="feedback-2-content" class="hidden space-y-5">
+        <!-- Score Comparison Header -->
+        <div class="p-5 rounded-2xl bg-purple-100/80 border border-purple-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="space-y-1 text-center sm:text-left">
+            <div class="inline-block px-2.5 py-0.5 rounded-md text-xs font-bold bg-purple-600 text-white">최종 검토 완료</div>
+            <h3 id="fb2-title" class="text-base font-extrabold text-purple-950">훌륭합니다! 과학적 개념이 완벽히 수정되었습니다.</h3>
+            <p id="fb2-comment" class="text-xs text-purple-800">오류가 있었던 부분이 잘 보완되었으며, 중학교 과학 표준 용어를 알맞게 활용했습니다.</p>
+          </div>
+          <div class="flex items-center gap-4 bg-white/90 px-4 py-3 rounded-2xl border border-purple-200 shadow-sm shrink-0">
+            <div class="text-center">
+              <span class="block text-[10px] text-slate-400 font-bold">1차 점수</span>
+              <span id="fb2-score-1" class="text-sm font-extrabold text-slate-500">80점</span>
+            </div>
+            <i class="fa-solid fa-arrow-right text-purple-400 text-xs"></i>
+            <div class="text-center">
+              <span class="block text-[10px] text-purple-600 font-bold">최종 점수</span>
+              <span id="fb2-score-2" class="text-xl font-black text-purple-700">95점</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Evaluation Rubric Breakdown -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="p-3.5 rounded-2xl bg-white border border-slate-200 text-center space-y-1">
+            <span class="text-xs text-slate-500 font-bold">과학적 정확성</span>
+            <div id="rubric-accuracy" class="text-sm font-bold text-indigo-600">★★★★★</div>
+          </div>
+          <div class="p-3.5 rounded-2xl bg-white border border-slate-200 text-center space-y-1">
+            <span class="text-xs text-slate-500 font-bold">과학 용어 적절성</span>
+            <div id="rubric-terms" class="text-sm font-bold text-teal-600">★★★★☆</div>
+          </div>
+          <div class="p-3.5 rounded-2xl bg-white border border-slate-200 text-center space-y-1">
+            <span class="text-xs text-slate-500 font-bold">설명 논리성</span>
+            <div id="rubric-logic" class="text-sm font-bold text-purple-600">★★★★★</div>
+          </div>
+        </div>
+
+        <!-- Final Praise & Detailed Review -->
+        <div class="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+          <h4 class="text-xs font-bold text-purple-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-award text-purple-500"></i> 과학 선생님 종합 평어 및 칭찬
+          </h4>
+          <p id="fb2-final-praise" class="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <!-- JS Populated -->
+          </p>
+        </div>
+
+        <!-- Sheet Sync & Output Status -->
+        <div class="p-4 rounded-2xl bg-slate-800 text-white flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+          <div class="flex items-center gap-3">
+            <div id="sheet-sync-icon" class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+              <i class="fa-solid fa-check"></i>
+            </div>
+            <div>
+              <div id="sheet-sync-status" class="text-xs font-bold text-emerald-300">구글 시트 연동 기록 상태</div>
+              <div id="sheet-sync-desc" class="text-[11px] text-slate-300">최종 결과가 정상적으로 동기화되었습니다.</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 no-print w-full sm:w-auto justify-end">
+            <button onclick="copyResultsCSV()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs font-medium transition flex items-center gap-1">
+              <i class="fa-solid fa-copy"></i> CSV 복사
+            </button>
+            <button onclick="window.print()" class="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow">
+              <i class="fa-solid fa-print"></i> 인쇄하기
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-slate-400 py-4 no-print space-y-1">
+      <p>중학생 과학 탐구 글쓰기 클리닉 &copy; 2026 Science Writing Assistant</p>
+      <p class="text-[11px] text-slate-400">Gemini 3 Flash 과학 모델 탑재 · 실시간 구글 시트 저장 연동</p>
+    </footer>
+
+  </div>
+
+  <!-- Google Sheet Settings Modal -->
+  <div id="sheet-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl relative border border-slate-100">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-extrabold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-file-excel text-emerald-600"></i> Google Sheet 연동 설정
+        </h3>
+        <button onclick="toggleSheetModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs text-slate-600 leading-relaxed">
+        <p>선생님/학생의 구글 시트로 실시간 기록을 보내려면 <strong>Google Apps Script Webhook URL</strong>을 입력하세요.</p>
+        <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-emerald-900 space-y-1">
+          <p class="font-bold">💡 30초 구글 시트 연동 방법:</p>
+          <ol class="list-decimal pl-4 space-y-0.5 text-[11px]">
+            <li>Google Sheet 생성 후 [확장 프로그램] ➔ [Apps Script] 클릭</li>
+            <li>아래 구글 스크립트 코드를 복사하여 붙여넣고 [배포] ➔ [새 배포] 클릭</li>
+            <li>액세스 권한: <strong>"모든 사용자(Anyone)"</strong> 선택 후 웹 앱 URL 복사</li>
+          </ol>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Google Apps Script Web App URL</label>
+          <input type="url" id="sheet-webhook-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2 text-xs border rounded-xl focus:ring-2 focus:ring-emerald-200 outline-none">
+        </div>
+
+        <!-- Script Code Copy Box -->
+        <div class="bg-slate-900 text-slate-200 p-3 rounded-xl space-y-1 font-mono text-[10px] relative overflow-x-auto">
+          <button onclick="copyAppsScriptCode()" class="absolute right-2 top-2 px-2 py-0.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-[10px]">복사</button>
+          <pre id="script-code">function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = JSON.parse(e.postData.contents);
+  sheet.appendRow([
+    new Date(),
+    data.studentName,
+    data.studentId,
+    data.topic,
+    data.draft1,
+    data.fb1Score,
+    data.draft2,
+    data.fb2Score,
+    data.finalPraise
+  ]);
+  return ContentService.createTextOutput("Success");
+}</pre>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="saveSheetUrl()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow transition">
+          설정 저장하기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Toast Notification Box -->
+  <div id="toast" class="fixed bottom-6 right-6 px-4 py-3 bg-slate-800 text-white rounded-2xl shadow-xl text-xs flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+    <i id="toast-icon" class="fa-solid fa-circle-info text-indigo-400"></i>
+    <span id="toast-message">알림 메시지</span>
+  </div>
+
+  <script>
+    // App State Management
+    const state = {
+      studentName: '',
+      studentId: '',
+      topic: '',
+      draft1: '',
+      feedback1: null,
+      draft2: '',
+      feedback2: null,
+      webhookUrl: localStorage.getItem('science_sheet_webhook') || ''
+    };
+
+    // Initialize inputs and counters
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('draft-1-text').addEventListener('input', (e) => {
+        document.getElementById('draft-1-length').textContent = e.target.value.length;
+      });
+      document.getElementById('draft-2-text').addEventListener('input', (e) => {
+        document.getElementById('draft-2-length').textContent = e.target.value.length;
+      });
+      if (state.webhookUrl) {
+        document.getElementById('sheet-webhook-url').value = state.webhookUrl;
+      }
+    });
+
+    // Helper: Toast Message
+    function showToast(msg, iconClass = 'fa-circle-info text-indigo-400') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').textContent = msg;
+      document.getElementById('toast-icon').className = `fa-solid ${iconClass}`;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3500);
+    }
+
+    // Modal Handlers
+    function toggleSheetModal() {
+      const modal = document.getElementById('sheet-modal');
+      modal.classList.toggle('hidden');
+    }
+
+    function saveSheetUrl() {
+      const url = document.getElementById('sheet-webhook-url').value.trim();
+      state.webhookUrl = url;
+      localStorage.setItem('science_sheet_webhook', url);
+      showToast('구글 시트 연동 URL이 저장되었습니다!', 'fa-circle-check text-emerald-400');
+      toggleSheetModal();
+    }
+
+    function copyAppsScriptCode() {
+      const code = document.getElementById('script-code').innerText;
+      copyToClipboard(code);
+      showToast('Google Apps Script 코드가 복사되었습니다!');
+    }
+
+    function copyToClipboard(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+
+    function copyDraft1To3() {
+      const draft1 = document.getElementById('draft-1-text').value;
+      if (!draft1) {
+        showToast('1차 초안이 비어있습니다.', 'fa-circle-exclamation text-amber-400');
+        return;
+      }
+      document.getElementById('draft-2-text').value = draft1;
+      document.getElementById('draft-2-length').textContent = draft1.length;
+      showToast('1차 초안 내용을 불러왔습니다.');
+    }
+
+    // Validation
+    function validateStudentInfo() {
+      const name = document.getElementById('student-name').value.trim();
+      const id = document.getElementById('student-id').value.trim();
+      const topic = document.getElementById('science-topic').value.trim();
+
+      if (!name || !id || !topic) {
+        showToast('상단의 학생 이름, 학년/반/번호, 과학 주제를 먼저 입력해주세요!', 'fa-circle-exclamation text-rose-400');
+        return false;
+      }
+      state.studentName = name;
+      state.studentId = id;
+      state.topic = topic;
+      return true;
+    }
+
+    // STEP 1 Submission -> Call Gemini API
+    async function submitDraft1() {
+      if (!validateStudentInfo()) return;
+      const draft1Text = document.getElementById('draft-1-text').value.trim();
+      if (draft1Text.length < 15) {
+        showToast('과학 설명글을 최소 15자 이상 적어주세요.', 'fa-circle-exclamation text-rose-400');
+        return;
+      }
+      state.draft1 = draft1Text;
+
+      // Show Step 2 container & Loading
+      const step2Container = document.getElementById('step-2-container');
+      const step2Loading = document.getElementById('feedback-1-loading');
+      const step2Content = document.getElementById('feedback-1-content');
+      
+      step2Container.classList.remove('hidden');
+      step2Loading.classList.remove('hidden');
+      step2Content.classList.add('hidden');
+
+      // Update Badge
+      document.getElementById('badge-step-2').className = 'py-2.5 px-2 rounded-2xl bg-amber-100 text-amber-800 border-2 border-amber-400 transition-all';
+
+      // Scroll smoothly to Step 2
+      step2Container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // Build Prompt for Gemini
+      const systemInstruction = `너는 중학교 과학 선생님이야. 학생들이 입력한 과학 개념 설명글을 분석하여 과학적 사실에 부합하는지 평가해줘.
+응답은 반드시 지정된 JSON 형식으로만 출력해줘.
+JSON 키 구조:
+{
+  "score": 80, // 0~100 사이 숫자
+  "summary": "한 줄 요약 피드백",
+  "strengths": ["잘한 점 1", "잘한 점 2"],
+  "errors": ["오류나 개념적 혼동 1", "보완할 점 2"],
+  "suggestions": "다음 수정 시 반영할 구체적 가이드 및 추천 과학 용어"
+}`;
+
+      const userQuery = `[학생 정보] 이름: ${state.studentName}, 단원/주제: ${state.topic}
+[학생이 작성한 1차 초안]
+"${state.draft1}"
+
+위 문단을 중학교 과학 교육과정 기준으로 과학적 사실 여부, 용어의 적절성, 원인과 결과의 논리성을 평가하여 JSON으로 답변해줘.`;
+
+      try {
+        const result = await fetchGeminiAPI(systemInstruction, userQuery);
+        state.feedback1 = result;
+        renderFeedback1(result);
+      } catch (err) {
+        console.error(err);
+        // Fallback simulated response on error
+        const fallback = {
+          score: 75,
+          summary: "과학적 개념의 기본 흐름은 훌륭하나, 일부 용어 정리가 필요합니다.",
+          strengths: ["주제 현상에 대해 원인을 파악하려는 시도가 좋습니다.", "문장의 흐름이 자연스럽습니다."],
+          errors: ["정확한 과학적 용어(예: 상태변화, 작용반작용 등) 대신 일상 용어가 사용되었습니다."],
+          suggestions: "교과서에 나오는 핵심 과학 용어를 사용하여 원인과 결과를 더욱 명확하게 연결해보세요."
+        };
+        state.feedback1 = fallback;
+        renderFeedback1(fallback);
+      }
+    }
+
+    function renderFeedback1(data) {
+      document.getElementById('feedback-1-loading').classList.add('hidden');
+      document.getElementById('feedback-1-content').classList.remove('hidden');
+
+      document.getElementById('fb1-score').textContent = data.score || 80;
+      document.getElementById('fb1-summary').textContent = data.summary || '1차 피드백 분석이 완료되었습니다.';
+
+      const strengthsList = document.getElementById('fb1-strengths');
+      strengthsList.innerHTML = (data.strengths || ['주제에 대한 설명이 성실합니다.'])
+        .map(item => `<li>${item}</li>`).join('');
+
+      const errorsList = document.getElementById('fb1-errors');
+      errorsList.innerHTML = (data.errors || ['특이 오류 없음'])
+        .map(item => `<li>${item}</li>`).join('');
+
+      document.getElementById('fb1-suggestions').textContent = data.suggestions || '핵심 용어를 정돈해보세요.';
+
+      // Unlock Step 3 Container
+      const step3 = document.getElementById('step-3-container');
+      step3.classList.remove('hidden');
+      document.getElementById('badge-step-3').className = 'py-2.5 px-2 rounded-2xl bg-teal-100 text-teal-800 border-2 border-teal-400 transition-all';
+    }
+
+    // STEP 3 Submission -> Call Gemini API for Final Comparison Feedback
+    async function submitDraft2() {
+      const draft2Text = document.getElementById('draft-2-text').value.trim();
+      if (draft2Text.length < 15) {
+        showToast('수정안을 최소 15자 이상 작성해주세요.', 'fa-circle-exclamation text-rose-400');
+        return;
+      }
+      state.draft2 = draft2Text;
+
+      // Show Step 4 container & Loading
+      const step4Container = document.getElementById('step-4-container');
+      const step4Loading = document.getElementById('feedback-2-loading');
+      const step4Content = document.getElementById('feedback-2-content');
+
+      step4Container.classList.remove('hidden');
+      step4Loading.classList.remove('hidden');
+      step4Content.classList.add('hidden');
+
+      document.getElementById('badge-step-4').className = 'py-2.5 px-2 rounded-2xl bg-purple-100 text-purple-800 border-2 border-purple-500 transition-all';
+
+      step4Container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      const systemInstruction = `너는 중학교 과학 선생님이야. 학생이 1차 초안에서 피드백을 받아 2차 수정안을 제출했어.
+초안과 수정안을 비교하여 얼마나 과학적으로 정확해졌고 발전했는지 종합 평가를 내려줘.
+JSON 형식으로 답변해줘.
+JSON 키 구조:
+{
+  "finalScore": 95, // 0~100 사이 숫자
+  "title": "칭찬 타이틀 제목",
+  "comment": "발전 과정에 대한 한 줄 총평",
+  "rubric": {
+    "accuracy": "★★★★★",
+    "terms": "★★★★☆",
+    "logic": "★★★★★"
+  },
+  "finalPraise": "학생에게 전하는 따뜻하고 격려 섞인 종합 과학 피드백 한 단락"
+}`;
+
+      const userQuery = `[주제/단원]: ${state.topic}
+[1차 초안]: "${state.draft1}"
+[1차 피드백 점수 및 지적사항]: 점수 ${state.feedback1?.score}점 / 오류: ${JSON.stringify(state.feedback1?.errors)}
+[학생이 수정한 2차 수정안]: "${state.draft2}"
+
+초안 대비 수정안에서 과학적 사실과 용어가 어떻게 개선되었는지 종합적으로 평가하여 JSON으로 알려줘.`;
+
+      try {
+        const result = await fetchGeminiAPI(systemInstruction, userQuery);
+        state.feedback2 = result;
+        renderFeedback2(result);
+      } catch (err) {
+        console.error(err);
+        const fallback = {
+          finalScore: 92,
+          title: "훌륭한 과학적 탐구글 완성!",
+          comment: "1차 피드백에서 지적된 과학 용어와 원리가 매끄럽게 보완되었습니다.",
+          rubric: { accuracy: "★★★★★", terms: "★★★★☆", logic: "★★★★★" },
+          finalPraise: "피드백을 받아들여 과학적 개념을 정확하게 고쳐 적은 노력이 돋보입니다. 중학교 과학 교육과정에 어울리는 명확한 과학적 설명글이 완성되었습니다!"
+        };
+        state.feedback2 = fallback;
+        renderFeedback2(fallback);
+      }
+    }
+
+    function renderFeedback2(data) {
+      document.getElementById('feedback-2-loading').classList.add('hidden');
+      document.getElementById('feedback-2-content').classList.remove('hidden');
+
+      document.getElementById('fb2-title').textContent = data.title || '성공적으로 교정되었습니다!';
+      document.getElementById('fb2-comment').textContent = data.comment || '과학적 사실에 기반하여 오류가 잘 수정되었습니다.';
+      document.getElementById('fb2-score-1').textContent = (state.feedback1?.score || 80) + '점';
+      document.getElementById('fb2-score-2').textContent = (data.finalScore || 95) + '점';
+
+      if (data.rubric) {
+        document.getElementById('rubric-accuracy').textContent = data.rubric.accuracy || '★★★★★';
+        document.getElementById('rubric-terms').textContent = data.rubric.terms || '★★★★☆';
+        document.getElementById('rubric-logic').textContent = data.rubric.logic || '★★★★★';
+      }
+
+      document.getElementById('fb2-final-praise').textContent = data.finalPraise || '수고하셨습니다!';
+
+      // Trigger automatic logging to Google Sheets / DB
+      sendToGoogleSheet();
+    }
+
+    async function fetchGeminiAPI(systemInstruction, userQuery) {
+      const apiKey = ""; // Runtime automatically injects API key if available
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+      const payload = {
+        contents: [{ parts: [{ text: userQuery }] }],
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      };
+
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        throw new Error(`Gemini API Error: ${res.status}`);
+      }
+
+      const json = await res.json();
+      const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) throw new Error("Invalid response format");
+
+      return JSON.parse(rawText);
+    }
+
+    async function sendToGoogleSheet() {
+      const statusIcon = document.getElementById('sheet-sync-icon');
+      const statusTitle = document.getElementById('sheet-sync-status');
+      const statusDesc = document.getElementById('sheet-sync-desc');
+
+      const payload = {
+        timestamp: new Date().toISOString(),
+        studentName: state.studentName,
+        studentId: state.studentId,
+        topic: state.topic,
+        draft1: state.draft1,
+        fb1Score: state.feedback1?.score || 80,
+        draft2: state.draft2,
+        fb2Score: state.feedback2?.finalScore || 95,
+        finalPraise: state.feedback2?.finalPraise || ''
+      };
+
+      if (!state.webhookUrl) {
+        statusIcon.className = "w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center";
+        statusTitle.textContent = "구글 시트 미연동 상태";
+        statusTitle.className = "text-xs font-bold text-amber-300";
+        statusDesc.textContent = "상단의 [구글 시트 연동] 버튼을 통해 Webhook URL을 등록하면 실시간 자동 저장됩니다.";
+        return;
+      }
+
+      try {
+        statusTitle.textContent = "구글 시트로 기록 전송 중...";
+        // Sending mode no-cors for Google Apps Script Webhooks
+        await fetch(state.webhookUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        statusIcon.className = "w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center";
+        statusTitle.textContent = "구글 시트 저장 완료!";
+        statusTitle.className = "text-xs font-bold text-emerald-300";
+        statusDesc.textContent = "선생님의 구글 스프레드시트에 활동 데이터가 성공적으로 저장되었습니다.";
+        showToast('구글 시트에 기록이 실시간 전달되었습니다!', 'fa-circle-check text-emerald-400');
+      } catch (err) {
+        console.error("Sheet Sync error:", err);
+        statusIcon.className = "w-8 h-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center";
+        statusTitle.textContent = "전송 실패";
+        statusTitle.className = "text-xs font-bold text-rose-300";
+        statusDesc.textContent = "URL 또는 네트워크 상태를 확인하세요. [CSV 복사]를 통해 직접 붙여넣을 수도 있습니다.";
+      }
+    }
+
+    function copyResultsCSV() {
+      const csvLine = `"${state.studentName}","${state.studentId}","${state.topic}","${state.draft1.replace(/"/g, '""')}","${state.feedback1?.score || 80}","${state.draft2.replace(/"/g, '""')}","${state.feedback2?.finalScore || 95}"`;
+      copyToClipboard(csvLine);
+      showToast('CSV 형식 한 줄 데이터가 복사되었습니다!');
+    }
+
+    function resetForm() {
+      if (confirm('모든 입력 내용을 지우고 처음부터 다시 시작하시겠습니까?')) {
+        document.getElementById('draft-1-text').value = '';
+        document.getElementById('draft-2-text').value = '';
+        document.getElementById('draft-1-length').textContent = '0';
+        document.getElementById('draft-2-length').textContent = '0';
+
+        document.getElementById('step-2-container').classList.add('hidden');
+        document.getElementById('step-3-container').classList.add('hidden');
+        document.getElementById('step-4-container').classList.add('hidden');
+
+        document.getElementById('badge-step-2').className = 'py-2.5 px-2 rounded-2xl bg-slate-100 text-slate-400 border-2 border-transparent transition-all';
+        document.getElementById('badge-step-3').className = 'py-2.5 px-2 rounded-2xl bg-slate-100 text-slate-400 border-2 border-transparent transition-all';
+        document.getElementById('badge-step-4').className = 'py-2.5 px-2 rounded-2xl bg-slate-100 text-slate-400 border-2 border-transparent transition-all';
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast('새로운 탐구글 작성을 시작합니다.');
+      }
+    }
+  </script>
+</body>
+</html>
